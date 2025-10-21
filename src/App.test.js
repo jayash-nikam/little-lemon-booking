@@ -1,30 +1,29 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
-import App from './App';
+import { render, screen, fireEvent } from '@testing-library/react';
 import BookingForm from './components/BookingForm';
-import Header from './components/Header';
 
-test('Renders the Header heading', () => {
-    render(<BrowserRouter><App /></BrowserRouter>);
-    const headingElement = screen.getByText("Reserve Table");
-    expect(headingElement).toBeInTheDocument();
+test('renders booking form heading and fields', () => {
+  render(<BookingForm availableTimes={['17:00','18:00']} />);
+  expect(screen.getByRole('heading', { name: /reserve a table/i })).toBeInTheDocument();
 
-    const reserveButton = screen.getByRole("button");
-    fireEvent.click(reserveButton);
+  expect(screen.getByLabelText(/choose date/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/choose time/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/number of guests/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/occasion/i)).toBeInTheDocument();
+});
 
-    const headingElementNew = screen.getByText("Choose Date");
-    expect(headingElementNew).toBeInTheDocument();
-})
+test('shows validation errors when submitted empty and prevents past dates', () => {
+  render(<BookingForm availableTimes={['17:00','18:00']} />);
+  const submitBtn = screen.getByRole('button', { name: /make your reservation/i });
+  fireEvent.click(submitBtn);
 
-test('Initialize/Update Times', () => {
-  render(<BrowserRouter><App /></BrowserRouter>);
-  const reserveButton = screen.getByRole("button");
-  fireEvent.click(reserveButton);
+  // errors should appear
+  expect(screen.getByText(/please choose a date/i)).toBeInTheDocument();
+  expect(screen.getByText(/please choose a time/i)).toBeInTheDocument();
 
-  const testTime = []
-  // userEvent.selectOptions(screen.getByLabelText("Choose Time"),screen.getByRole('option', { name: testTime}))
-  // expect(screen.getByRole('option', { name: testTime}).selected).toBe(true);
-
-
-})
+  // test past date prevention
+  const dateInput = screen.getByLabelText(/choose date/i);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  fireEvent.change(dateInput, { target: { value: yesterday }});
+  fireEvent.click(submitBtn);
+  expect(screen.getByText(/cannot be in the past/i)).toBeInTheDocument();
+});
